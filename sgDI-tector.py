@@ -33,6 +33,35 @@ import RNA_sequence_logo
 
 #=================================
 
+def align_junction_LeftRight(viral_seq, bp_pos, ri_pos, align_to="L"):
+    """If align_to="L", put all the ambiguous nucleotides in the
+    'body' part of the junction defined by bp_pos and ri_pos,
+    that is the junction point is moved as close to the 5' 
+    end (of viral_seq) as possible. If align_to="R", do the opposite."""    
+    py_ri = ri_pos-1 # in this way viral_seq[py_ri] is the first nucleotide after the junction obtained by DI-tector
+    py_bp = bp_pos-1 # in this way viral_seq[py_bp] is the last nucleotide before the junction obtained by DI-tector    
+    assert (align_to == "L" or align_to == "R"), "Plese enter R or L to align as right as possible or as left as possible."
+    new_bp_pos = py_bp
+    new_ri_pos = py_ri
+    try_next_alignement = True
+    while try_next_alignement:
+        if align_to == "L":
+            if vir_seq[new_bp_pos] == vir_seq[new_ri_pos-1]:
+                new_bp_pos -= 1
+                new_ri_pos -= 1
+            else:
+                try_next_alignement = False
+        elif align_to == "R":
+            if vir_seq[new_bp_pos+1] == vir_seq[new_ri_pos]:
+                new_bp_pos += 1
+                new_ri_pos += 1
+            else:
+                try_next_alignement = False     
+    new_bp_pos += 1 # in this way I am using a fixed convention
+    new_ri_pos += 1 # in this way I am using a fixed convention
+    return new_bp_pos, new_ri_pos
+
+
 def findall(p, s):
     """Yields all the positions of
     the pattern p in the string s."""
@@ -280,6 +309,22 @@ if __name__ =='__main__':
     del_small_df = del_df[["BP_Pos", "RI_Pos", "SEQ_FL_ori"]].copy() # here I am loosing info about fwd/rev strand deletions (but the sequences could be different...)
     del_small_df["count"] = 1
     del_small_df = del_small_df.groupby(by=["BP_Pos", "RI_Pos", "SEQ_FL_ori"], as_index=False).sum()
+    # correct for ambiguous BP and RI pos (move as close to 3' as possible)
+    t_seqs = []
+    for record in SeqIO.parse(args.Virus_Ref, "fasta"):
+        t_seqs.append(str(record.seq))
+    assert len(t_seqs) == 1, "Please provide the viral sequence in FASTA format, as a single entry."
+    vir_seq = t_seqs[0]
+    rabps = []
+    raris = []
+    for i in range(len(del_small_df)):
+        bp = del_small_df["BP_Pos"][i]
+        ri = del_small_df["RI_Pos"][i]
+        t_bp, t_ri = align_junction_LeftRight(vir_seq, bp, ri, "R")
+        rabps.append(t_bp)
+        raris.append(t_ri)
+    del_small_df["BP_Pos"] = rabps
+    del_small_df["RI_Pos"] = raris
     print("Done!")
     
     print("Searching for leader sequence...", end=' ', flush=True)
@@ -297,11 +342,6 @@ if __name__ =='__main__':
     max_nbp_pos = max_nbp_pos_list[0]
     leader_window += l_extra # if several positions close together have the same number of junctions
     # print file with leader sequence
-    t_seqs = []
-    for record in SeqIO.parse(args.Virus_Ref, "fasta"):
-        t_seqs.append(str(record.seq))
-    assert len(t_seqs) == 1, "Please provide the viral sequence in FASTA format, as a single entry."
-    vir_seq = t_seqs[0]
     with open(out_path + 'leader_sequence.txt','w') as f:
         f.write(vir_seq[:max_nbp_pos+leader_window])
     print("Done!")
