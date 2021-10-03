@@ -12,7 +12,8 @@ output folder (unless the option --Force_DItector is provided).
 
 ### Input files
 Minimum input files are the virus sequence (in fasta format)
-and the NGS data (in fastq.gz format). Notice that the fastq.gz file is
+and the NGS data (in fastq.gz format, needed only if sgDI-tector needs 
+to be run). Notice that the fastq.gz file is
 used only when DI-tector is run. Optionally, a file with reference ORFs
 translated by sgRNA expression can be given as input 
 (through the -r or --sgRNA_Ref option), in fasta (CDS) format. 
@@ -34,8 +35,12 @@ of the sgRNA and the position of the first ATG codon in the sgRNA produced.
 Moreovoer, a name identifying the ORF is given, and this name is obtained
 after comparison with the reference subgenomic ORFs if the 
 option -r or --sgRNA_Ref is used.
-- `TRS_logo.pdf`: the logo of the 20 nt preceding and following each RI
-position is given, after an alignment step.
+- `detected_TRS_motifs.csv`: for each family of sgRNA, the longest subsequence
+in the 20 nts around the RI site having an identical overlapping subsequence
+in the last part of the leader sequence is given, together with some info
+about the sgRNA family it comes from. Notice that subsequences shortest
+than a threshold (fixed by the algorithm so that less than 5% of all possible
+20-nt subsequences would give a hit) are not considered. 
 The output folder can be chosen by using the -o or --Output_Directory 
 option, if no folder is provided the files will be created in the working
 directory.
@@ -58,10 +63,6 @@ known to be expressed thorugh sgRNAs. sgRNA families found by sgDI-tector
 which can be aligned well to an entry of this file will have as name the
 description of the entry (that is, the string after the symbol '>').
 
-The folder "utilities" contains the package `RNA_sequence_logo.py`, that
-is needed to print the TRS sequence logo.
-
-
 ## Dependencies:
 sgDI-tector can be run on Linux or Windows. In the second case, all the
 bioinformatic tools (and DI-tector) are run through [WSL](https://ubuntu.com/wsl), 
@@ -75,22 +76,15 @@ directory of sgDI-tector and named `DI-tector_06.py`.
 DI-tector can be obtained from [this website](http://www.di-tector.cyame.eu/).
 
 The other tools needed are common bioinformatic softwares: 
-- [bwa](http://www.htslib.org/),
-- [samtools](http://www.htslib.org/) and
-- [mafft](https://mafft.cbrc.jp/alignment/software/).  
+- [bwa](http://www.htslib.org/) and
+- [samtools](http://www.htslib.org/).
 
 Notice that bwa and samtools are only needed to run DI-tector, so if
 DI-tector output data are already available there is no need for these
 softwares.
 
 Some python3 libraries are needed to run this script, in particular
-`numpy`, `pandas` and `biopython`. Moreover, the package `RNA_sequence_logo.py`
-is needed to print the TRS logo. This last package must be in the running
-folder of sgDI-tector, or in a subfolder called "utilities".
-
-## Acknowledgements:
-The utility python package used for printing RNA logos (`RNA_sequence_logo.py`) 
-has been written by Jerome Tubiana, see the licence note in the file.
+`numpy`, `pandas` and `biopython`.
 
 ## Contacts:
 For comments or question, feel free to [contact me](mailto:andrea.dgioacchino@gmail.com).
