@@ -162,7 +162,7 @@ if __name__ =='__main__':
     # parser for command-line options
     parser = argparse.ArgumentParser()
     parser.add_argument("Virus_Ref", help="Virus genome reference sequence in FASTA format.")
-    parser.add_argument("Input_Data", help="File containing single reads in FASTQ format.")
+    parser.add_argument("Input_Data", nargs='?', help="File containing single reads in FASTQ format, needed only if DI-tector is run.", default=None)
     parser.add_argument("-g", "--Host_Ref", help="[DI-tector] Host genome reference sequence in FASTA format (optional).")
     parser.add_argument("-r", "--sgRNA_Ref", help="sgRNAs of reference viral sequence, in FASTA format (optional).")
 
@@ -274,6 +274,9 @@ if __name__ =='__main__':
         run_ditector = True
     
     if run_ditector:
+        # print an error if Input fastq is not given and DI-tector must be run
+        assert args.Input_Data is not None, "ERROR: DI-tector needs to be run, please provide fastq file as input file (see sgDi-tector.py -h for help)."
+        
         # print an error if DI-tector_06.py is not found
         assert Path("DI-tector_06.py").exists(), "ERROR: DI-tector_06.py needs to be in the same folder as sgDI-tector, exiting..."
         
