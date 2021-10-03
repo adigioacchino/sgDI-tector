@@ -134,27 +134,22 @@ def cluster_subgenomic_families(df_start, vir_seq, key_bp="BP_pos", key_ri="RI_p
     return family_df.sort_values(by='counts', ascending=False).reset_index(drop=True)
 
 
-def seq2num(seq):
-    """Transform a RNA sequence or list of RNA sequences
-    (seq) into a list of numbers."""
-    aa = ['A', 'C', 'G', 'U', '-']
-    aadict = {aa[k]:k for k in range(len(aa))}
-    if type(seq) == str:
-        return np.array([aadict[x] for x in seq], dtype=np.int16)[np.newaxis,:]
-    elif type(seq) ==list:
-        return np.array([[aadict[x] for x in seq_] for seq_ in seq], dtype=np.int16)
+def find_maximum_contiguous_overlap(s1, s2):
+    """Return the longest overlapping sequence between
+    s1 and s2."""
+    k = 1
+    kmers_s1 = [s1[i:i+k] for i in range(len(s1)-(k-1))]
+    are_in_s2 = [x in s2 for x in kmers_s1]
+    for k in range(2, len(s1)+1):
+        buffer_kmers_s1 = [s1[i:i+k] for i in range(len(s1)-(k-1))]
+        buffer_are_in_s2 = [x in s2 for x in buffer_kmers_s1]
+        if np.sum(buffer_are_in_s2) != 0:
+            kmers_s1 = buffer_kmers_s1.copy()
+            are_in_s2 = buffer_are_in_s2.copy()
+        else:
+            break
+    return np.array(kmers_s1)[np.array(are_in_s2)]
 
-    
-def average(MSA2num, q):
-    """Compute the average value in each column of the MSA
-    MSA2num provided, q being the size of the alphabet."""
-    B = MSA2num.shape[0]
-    N = MSA2num.shape[1]
-    out = np.zeros((N, q), dtype=np.float32)
-    for i in range(q):
-        out.T[i] = np.sum(MSA2num == i, axis=0)
-    out /= B
-    return out
 
 #=================================
 
@@ -216,22 +211,23 @@ if __name__ =='__main__':
     # sgDI-tector parameters
     leader_window = args.Min_Segment + 5 # that is, default: 20.
     threshold_sgRNAnames = 0.9 # threshold for assigning sgRNA name
-    junct_window = 20 # junction window to consider for alignment and logo production
+    junct_window = 20 # junction window to consider for TRS motif search
     gap_thresh = 0.5 # fraction of rows containing gaps necessary to exclude a column in the logo
+    prob_thresh = 0.05 # used in TRS motif search
     
     print("###########################################################")
     print("This is sgDI-tector.")
     if sys.platform == 'win32':
         print("Operating system Windows detected.")
-        print("sgDI-tector uses WSL (https://ubuntu.com/wsl) to call bwa,",
-              "DI-tector and MAFFT, please check that WSL is installed",
-              "and all necessary software (bwa, samtools, mafft)",
+        print("sgDI-tector uses WSL (https://ubuntu.com/wsl) to call bwa",
+              "and DI-tector, please check that WSL is installed",
+              "and all necessary software (bwa, samtools)",
               "is in PATH within WSL. DI-tector (version 0.6) must be",
               "in the same folder of sgDI-tector, and named",
               "DI-tector_06.py.")
     elif sys.platform == 'linux':
         print("Please check that",
-              "all necessary software (bwa, samtools, mafft)",
+              "all necessary software (bwa, samtools)",
               "is in PATH. DI-tector (version 0.6) must be",
               "in the same folder of sgDI-tector, and named",
               "DI-tector_06.py.")
@@ -241,7 +237,7 @@ if __name__ =='__main__':
     
 
     # check if all required softwares are installed
-    software_needed = ["bwa", "samtools", "mafft"]
+    software_needed = ["bwa", "samtools"]
     if sys.platform == 'win32':
         # required
         if not which("wsl"):
@@ -404,43 +400,33 @@ if __name__ =='__main__':
     del_small_filtered_families_df.to_csv(out_path + "sgRNA_junctions.csv", index=False)
     print("Done!")
     
-    print("Alignment of sgRNA junctions...")
-    print("This is MAFFT:")
-    # last part: align and print the logo of the sequences
-    # write temp file in fasta format with leader_window
-    junc_seq = [vir_seq[rip-junct_window:rip]+vir_seq[rip:rip+junct_window] for rip in del_small_filtered_df["RI_Pos"]]
-    with open('temp.fasta','w') as f:
-        for i, s in enumerate(junc_seq):
-            f.write('> junction' + str(i) + '\n')
-            f.write(s + '\n')
-    # align all seqs with MAFFT fftnsi routine (https://mafft.cbrc.jp/alignment/software/manual/manual.html)
-    t_command = "einsi --thread " + str(args.Nb_threads) + " temp.fasta > temp_ali.fasta"
-    if sys.platform == 'win32':
-        proc = subprocess.Popen("wsl", stdin=subprocess.PIPE) # This trick make sure that .bashrc is loaded!
-        proc.communicate(input=str.encode(t_command))
-    elif sys.platform == 'linux':
-        with open("temp_ali.fasta", 'w') as mafft_outtempfile: 
-            subprocess.run(shlex.split(t_command)[:-2], stdout=mafft_outtempfile, text=True)
-    assert Path("temp_ali.fasta").exists(), "ERROR: mafft alignment not succesfull, exiting..."
-    # load MSA, trim columns with fraction of gaps > gap_thresh
-    MSA_junctions = [str(record.seq).upper() for record in SeqIO.parse("temp_ali.fasta", "fasta")]
-    RNA_MSA_junctions = [s.replace("T","U") for s in MSA_junctions]
-    RNA_MSA_junc_2num = seq2num(RNA_MSA_junctions)
-    trimmed_RNA_MSA_junc2num = RNA_MSA_junc_2num[:, np.sum(RNA_MSA_junc_2num == 4, axis=0) <= len(RNA_MSA_junc_2num) * gap_thresh]
-    # sequence logo - not weighted
-    mu = average(trimmed_RNA_MSA_junc2num, q=5)
-    fig = RNA_sequence_logo.Sequence_logo(mu, ticks_every=5, figsize=(12,5), ticks_labels_size=18, title_size=22, show=False)
-    # remove temporary files
-    try:
-        os.remove("temp.fasta")
-    except OSError:
-        pass
-    try:
-        os.remove("temp_ali.fasta")
-    except OSError:
-        pass
-    # save figure with logo
-    fig.savefig(out_path + 'TRS_logo.pdf', format='pdf', bbox_inches='tight')
+    print("TRS motif search...", end=' ', flush=True)
+    trs_leader = vir_seq[max_nbp_pos:max_nbp_pos+leader_window]
+    # find minimum overlap
+    vir_all_subseqs = [vir_seq[p:p+junct_window] for p in range(max_nbp_pos + leader_window, len(vir_seq) - junct_window)]
+    scores = []
+    for t_s in vir_all_subseqs:
+        overlaps = find_maximum_contiguous_overlap(t_s, trs_leader)
+        scores.append(len(overlaps[0]))
+    probs = [sum(np.array(scores) >= x) / len(scores) for x in np.arange(max(scores)+1, min(scores)-1, -1)]
+    min_length = np.arange(max(scores)+1, min(scores)-1, -1)[np.searchsorted(probs, prob_thresh) - 1]
+    jnames = []
+    jcounts = []
+    joverlaps = []
+    for i in range(len(del_small_filtered_families_df)):
+        ri = del_small_filtered_families_df["ri_pos"][i]
+        py_ri = ri-1
+        ri_left = vir_seq[py_ri-junct_window//2:py_ri]
+        ri_right = vir_seq[py_ri:py_ri+junct_window//2]
+        t_s = ri_left + ri_right
+        overlaps = find_maximum_contiguous_overlap(t_s, trs_leader)
+        t_score = len(overlaps[0])
+        if t_score >= 7:
+            [jnames.append(del_small_filtered_families_df["ORF"].to_numpy()[i]) for ovlp in overlaps]
+            [jcounts.append(del_small_filtered_families_df["counts"].to_numpy()[i]) for ovlp in overlaps]
+            [joverlaps.append(ovlp) for ovlp in overlaps]
+    trs_motif_df = pd.DataFrame({"junction_name" : jnames, "junction_counts" : jcounts, "junction_overlapping_motif" : joverlaps})
+    trs_motif_df.to_csv(out_path + "detected_TRS_motifs.csv", index=False)
     print("Done!")
     
     print("All done!")
