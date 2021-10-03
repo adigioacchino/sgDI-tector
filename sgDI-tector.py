@@ -263,7 +263,7 @@ if __name__ =='__main__':
             out_path = out_dir+'/'
     else:
         out_path = "./"
-    di_tect_outfiles = ['DI-tector_Ali.txt', 'DI-tector_counts.txt', 'DI-tector_output_sorted.txt', 'DI-tector_summary.txt']
+    di_tect_outfiles = ['DI-tector_output_sorted.txt']
     if args.Force_DItector:
         run_ditector = True
     elif not Path(out_path).exists():
@@ -305,6 +305,9 @@ if __name__ =='__main__':
     ditect_outfile_outsor = out_path + 'DI-tector_output_sorted.txt'
     # extract deletions (fwd and rev strand), keep only bp, ri, sequence, group by them and add count column
     t_df = pd.read_csv(ditect_outfile_outsor, sep='\t')
+    if len(t_df) == 0: # exit if DI-tector didn't find any DVG sequence
+        print("No DVG data found from DI-tector output file! Exiting...")
+        sys.exit(0)
     del_df = t_df[(t_df["DVG's type"] == 'Deletion DVG (Fwd. strand)') | (t_df["DVG's type"] == 'Deletion DVG (Rev. strand)')]
     del_small_df = del_df[["BP_Pos", "RI_Pos", "SEQ_FL_ori"]].copy() # here I am loosing info about fwd/rev strand deletions (but the sequences could be different...)
     del_small_df["count"] = 1
