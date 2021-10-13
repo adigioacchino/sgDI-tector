@@ -251,9 +251,9 @@ if __name__ =='__main__':
 
     # check if DI-tector must be run
     if args.Output_Directory:
-        out_dir = args.Output_Directory
-        if not out_dir.endswith("/"):
-            out_path = out_dir+'/'
+        out_path = args.Output_Directory
+        if not out_path.endswith("/"):
+            out_path = out_path+'/'
     else:
         out_path = "./"
     di_tect_outfiles = ['DI-tector_output_sorted.txt']
