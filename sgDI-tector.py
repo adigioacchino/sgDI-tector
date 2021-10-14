@@ -349,6 +349,8 @@ if __name__ =='__main__':
     # filter out everything with BP_Pos not in the interval, then cluster for ATG position
     del_small_filtered_df = del_small_df[(del_small_df["BP_Pos"] >= max_nbp_pos) & (del_small_df["BP_Pos"] < max_nbp_pos+leader_window)].reset_index(drop=True)
     del_small_filtered_families_df = cluster_subgenomic_families(del_small_filtered_df, vir_seq, key_bp="BP_Pos", key_ri="RI_Pos")
+    # exclude families with no ATG codon
+    del_small_filtered_families_df = del_small_filtered_families_df[del_small_filtered_families_df["atg_pos"] != -1].reset_index(drop=True)
     print("Done!")
     
     print("Annotating ORF names...", end=' ', flush=True)
