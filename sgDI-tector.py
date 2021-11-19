@@ -165,6 +165,7 @@ if __name__ =='__main__':
     parser.add_argument("-t", "--Tag", help="[DI-tector] Tag name that will be appended before each DI-tector output file. Default is 'DI-tector'.", default="DI-tector")
     parser.add_argument("-d", "--DVG_sequences", action='store_true', help="[DI-tector] Generate multi-fasta file with DVG sequences. Default is (OFF).")
     parser.add_argument("-l", "--InDel_Length", help="[DI-tector] Skip alignments with size of InDels smaller or equal to INT. Default size is 1.", type=int, default=1)
+    parser.add_argument("-l2", "--InDel_Length_sgRNA", help="When searching for sgRNA, skip deletions with size of InDels smaller or equal to INT. Default size is 50.", type=int, default=50)
     parser.add_argument("-f", "--Fasta", action='store_true', help="[DI-tector] Use '-f' if data is in FASTA format fasta. Default is FASTQ.")
     parser.add_argument("-p", "--Polarity", help="[DI-tector] [0] Positive strand genome / [1] Negative strand genome. Default is 0.", type=int, default=0)
     parser.add_argument("-q", "--No_Quantification", action='store_true', help="[DI-tector] Inactive percentage quantification. Needs bedtools. Default is (ON).")
@@ -211,6 +212,7 @@ if __name__ =='__main__':
     junct_window = 20 # junction window to consider for TRS motif search
     gap_thresh = 0.5 # fraction of rows containing gaps necessary to exclude a column in the logo
     prob_thresh = 0.05 # used in TRS motif search
+    indel_sgRNA_thresh = args.InDel_Length_sgRNA
     
     print("###########################################################")
     print("This is sgDI-tector.")
@@ -299,13 +301,14 @@ if __name__ =='__main__':
     
     print("Loading DVG data...", end=' ', flush=True)
     ditect_outfile_outsor = out_path + 'DI-tector_output_sorted.txt'
-    # extract deletions (fwd and rev strand), keep only bp, ri, sequence, group by them and add count column
+    # extract deletions (fwd and rev strand), keep only bp, ri, sequence, discard INDELS and group by them and add count column
     t_df = pd.read_csv(ditect_outfile_outsor, sep='\t')
     if len(t_df) == 0: # exit if DI-tector didn't find any DVG sequence
         print("No DVG data found from DI-tector output file! Exiting...")
         sys.exit(0)
     del_df = t_df[(t_df["DVG's type"] == 'Deletion DVG (Fwd. strand)') | (t_df["DVG's type"] == 'Deletion DVG (Rev. strand)')]
     del_small_df = del_df[["BP_Pos", "RI_Pos", "SEQ_FL_ori"]].copy() # here I am loosing info about fwd/rev strand deletions (but the sequences could be different...)
+    del_small_df = del_small_df[del_small_df["RI_Pos"] - del_small_df["BP_Pos"] > indel_sgRNA_thresh].reset_index(drop=True) # discard indels
     del_small_df["count"] = 1
     del_small_df = del_small_df.groupby(by=["BP_Pos", "RI_Pos", "SEQ_FL_ori"], as_index=False).sum()
     # correct for ambiguous BP and RI pos (move as close to 3' as possible)
