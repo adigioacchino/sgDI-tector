@@ -294,7 +294,8 @@ if __name__ =='__main__':
             proc = subprocess.Popen("wsl", stdin=subprocess.PIPE)
             proc.communicate(input=str.encode(t_command))
         elif sys.platform == 'linux':
-            subprocess.run(shlex.split(t_command))
+            dit_proc_out = subprocess.run(shlex.split(t_command))
+            assert dit_proc_out.returncode == 0, "ERROR: DI-tector call failed, exiting..."  
         print("Done!")
     else:
         print("DI-tector output files found, not running DI-tector again (to change this, use the --Force_DItector option).")
