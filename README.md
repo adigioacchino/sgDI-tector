@@ -89,8 +89,10 @@ Some python3 libraries are needed to run this script, in particular
 `numpy`, `pandas` and `biopython`.
 
 ## Example:
-The command to use sgDI-tector tool on the provided example files is
-`python3 sgDI-tector.py -r ./input_examples/NC_045512.2_sgRNA.fasta ./input_examples/NC_045512.2.fasta ./input_examples/SARS2_subsampling.fastq.gz`.
+The command to use sgDI-tector tool on the provided example files is:
+
+`python3 sgDI-tector.py -r ./input_examples/NC_045512.2_sgRNA.fasta ./input_examples/NC_045512.2.fasta ./input_examples/SARS2_subsampling.fastq.gz`
+
 Notice that for this to work, the DI-tector script named `DI-tector_06.py` must be in the running directory of sgDI-tector (see section "Dependencies" above).
 
 ## How to cite this software:
