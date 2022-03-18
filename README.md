@@ -14,8 +14,7 @@ package](https://rnajournal.cshlp.org/content/28/3/277).
 
 ### Input files
 Minimum input files are the virus sequence (in fasta format)
-and the NGS data (in fastq.gz format, needed only if sgDI-tector needs
-to be run). Notice that the fastq.gz file is
+and the NGS data (in fastq.gz or fastq format). Notice that the fastq.gz file is
 used only when DI-tector is run. Optionally, a file with reference ORFs
 translated by sgRNA expression can be given as input
 (through the -r or --sgRNA_Ref option), in fasta (CDS) format.
@@ -58,7 +57,8 @@ The sgDI-tector script file is `sgDI-tector.py`.
 
 The folder "input_examples"
 contains a SARS-CoV-2 reference sequence (obtained from NCBI) fasta file,
-`NC_045512.2.fasta`. Moreover, an example of file that can be given as
+`NC_045512.2.fasta`, and a small example of input fastq data named `SARS2_subsampling.fastq.gz`.
+Moreover, this folder contains an example of file that can be given as
 input with the -r or --sgRNA_Ref option is `NC_045512.2_sgRNA.fasta`: it
 is obtained from the same NCBI record, and it contains only the ORF
 known to be expressed thorugh sgRNAs. sgRNA families found by sgDI-tector
@@ -87,6 +87,11 @@ softwares.
 
 Some python3 libraries are needed to run this script, in particular
 `numpy`, `pandas` and `biopython`.
+
+## Example:
+The command to use sgDI-tector tool on the provided example files is
+`python3 sgDI-tector.py -r ./input_examples/NC_045512.2_sgRNA.fasta ./input_examples/NC_045512.2.fasta ./input_examples/SARS2_subsampling.fastq.gz`.
+Notice that for this to work, the DI-tector script named `DI-tector_06.py` must be in the running directory of sgDI-tector (see section "Dependencies" above).
 
 ## How to cite this software:
 If you  use this software for an academic publication, please cite the
